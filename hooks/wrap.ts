@@ -49,6 +49,13 @@ export const addPending = (pending: Pending[], text: string, at: number): Pendin
 export const settlePending = (pending: Pending[], door: string, text: string): Pending[] =>
   door === 'delivery' || door === 'prompt' ? pending.filter(p => !text.includes(p.text)) : pending
 
+// The row of a slash command carries no queued flag and no submit event reaches the mod; a
+// command row first drawn while a turn runs is queued until the command runs.
+export const isQueuedCommandRow = (text: string, isWorking: boolean): boolean => isWorking && text.startsWith('/')
+
+// The engine's record of a command that ran: `<command-name>/sap</command-name>`.
+export const commandNameIn = (record: string): string | undefined => record.match(/<command-name>(\/[^<\s]+)<\/command-name>/)?.[1]
+
 // The row of a queued slash command shows its line with the slash.
 export const commandLine = (name: string, args: string): string => (args ? `/${name} ${args}` : `/${name}`)
 

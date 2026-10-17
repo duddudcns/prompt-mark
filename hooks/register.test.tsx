@@ -84,19 +84,40 @@ test('작업 중에 보낸 메시지만 흐리고(같은 글자의 이전 행은
   expect((await bodyOf(queued))?.props.bold).toBe(true)
 })
 
-test('작업 중에 보낸 명령어도 흐리고, 명령이 실행되면 대기 목록에서 빠진다', async ($, on) => {
+test('작업 중에 처음 그려진 /명령 줄은 흐리고, 명령 기록이 오면 풀린다', async ($, on) => {
   const clock = mock.clock(on)
   on('ui.render', async () => null as never)
   on('turn.start', async (_$, e) => ({ turnId: e.turnId }))
-  on('prompt.submit', async (_$, e) => ({ text: e.text }))
-  on('command.run', async () => ({ text: 'ran' }))
-  await $.turn.start({ text: 'go', turnId: 't1' } as never)
-  await $.prompt.submit({ text: '/sap', origin: { kind: 'composer' }, command: { name: 'sap', args: '' } } as never)
+  const mountRow = (requestId: string, text: string) =>
+    $.ui.mount({ plugin: PLUGIN, surface: 'terminal', component: 'UserMessage', requestId, props: props(text, 'composer'), viewport: { columns: 40, rows: 20 } as never })
+  const bodyOf = async (ui: Awaited<ReturnType<typeof mountRow>>, text: string) => (await ui.findAll({ type: 'Text' })).find(t => t.text === text)
+
+  const before = await mountRow('c0', '/sap')
   await clock.advance(10)
-  const ui = await $.ui.mount({ plugin: PLUGIN, surface: 'terminal', component: 'UserMessage', requestId: 'c1', props: props('/sap', 'composer'), viewport: { columns: 40, rows: 20 } as never })
-  const body = async () => (await ui.findAll({ type: 'Text' })).find(t => t.text === '/sap')
+  await $.turn.start({ text: 'go', turnId: 't1' } as never)
+  await clock.advance(10)
+  const queued = await mountRow('c1', '/sap')
+  expect((await bodyOf(queued, '/sap'))?.props.dimColor).toBe(true)
+  expect((await bodyOf(before, '/sap'))?.props.bold).toBe(true)
+
+  await $.session.append({
+    message: { type: 'system', content: [{ type: 'text', text: '<command-name>/sap</command-name>' }] },
+    door: 'command', origin: { kind: 'engine' }, uuid: 'k1',
+  } as never)
+  expect((await bodyOf(queued, '/sap'))?.props.bold).toBe(true)
+})
+
+test('명령은 작업이 끝나면 대기에서 풀린다 (기록이 안 와도 흐린 채 남지 않는다)', async ($, on) => {
+  const clock = mock.clock(on)
+  on('ui.render', async () => null as never)
+  on('turn.start', async (_$, e) => ({ turnId: e.turnId }))
+  on('turn.complete', async (_$, e) => ({ text: e.answer }))
+  await $.turn.start({ text: 'go', turnId: 't1' } as never)
+  await clock.advance(10)
+  const ui = await $.ui.mount({ plugin: PLUGIN, surface: 'terminal', component: 'UserMessage', requestId: 'c9', props: props('/foo bar', 'composer'), viewport: { columns: 40, rows: 20 } as never })
+  const body = async () => (await ui.findAll({ type: 'Text' })).find(t => t.text === '/foo bar')
   expect((await body())?.props.dimColor).toBe(true)
-  await $.command.run({ command: 'sap', args: '' } as never)
+  await $.turn.complete({ answer: '', durationMs: 1, isAborted: false, turnId: 't1', reason: 'answer' } as never)
   expect((await body())?.props.bold).toBe(true)
 })
 
