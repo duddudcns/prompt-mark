@@ -24,5 +24,6 @@
       "description": "내 메시지 줄의 배경색(줄 전체 폭): 색 이름 또는 #hex. 비우면 배경 없음",
       "default": "#373737"
     }
-  }
+  },
+  "types": "./types/index.d.ts"
 }

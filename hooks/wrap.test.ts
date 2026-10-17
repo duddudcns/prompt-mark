@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { displayWidth, isPersonsPrompt, wrapToWidth } from './wrap'
+import { displayWidth, isPersonsPrompt, settlePending, textOf, wrapToWidth } from './wrap'
 
 test('표시 폭: 영문 1칸, 한글 2칸', async () => {
   expect(displayWidth('ab')).toBe(2)
@@ -30,4 +30,16 @@ test('사람이 직접 친 프롬프트만 표시한다 (작업 알림·다른 �
   expect(isPersonsPrompt({ kind: 'bridge' })).toBe(true)
   expect(isPersonsPrompt({ kind: 'task-notification' })).toBe(false)
   expect(isPersonsPrompt({ kind: 'peer' })).toBe(false)
+})
+
+test('행 본문은 텍스트 블록만 이어 붙인다', async () => {
+  expect(textOf([{ type: 'text', text: 'a' }, { type: 'image' }, { type: 'text', text: 'b' }])).toBe('a\nb')
+})
+
+test('대기열 기록이면 대기 목록에 넣고, 실제 전달(prompt/delivery)이면 뺀다', async () => {
+  expect(settlePending([], 'queue', 'hi')).toEqual(['hi'])
+  expect(settlePending(['hi'], 'queue', 'hi')).toEqual(['hi'])
+  expect(settlePending(['hi', 'yo'], 'delivery', 'hi')).toEqual(['yo'])
+  expect(settlePending(['hi'], 'prompt', 'hi')).toEqual([])
+  expect(settlePending(['hi'], 'response', 'hi')).toEqual(['hi'])
 })

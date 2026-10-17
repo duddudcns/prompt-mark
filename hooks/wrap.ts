@@ -35,6 +35,17 @@ const wrapLine = (line: string, width: number): string[] => {
 export const wrapToWidth = (text: string, width: number): string[] =>
   text.split(/\r?\n/).flatMap(line => wrapLine(line, Math.max(1, width)))
 
+export const textOf = (content: readonly { type: string; text?: string }[]): string =>
+  content.filter(block => block.type === 'text' && typeof block.text === 'string').map(block => block.text).join('\n')
+
+// A prompt typed while Claude works is first a queue record (door 'queue'), then a real row
+// once delivered ('delivery' into the running turn, or 'prompt' opening the next one).
+export const settlePending = (pending: string[], door: string, text: string): string[] => {
+  if (door === 'queue') return pending.includes(text) ? pending : [...pending, text].slice(-20)
+  if (door === 'delivery' || door === 'prompt') return pending.filter(p => p !== text && !text.startsWith(p))
+  return pending
+}
+
 // The person's own words: typed at the prompt, or sent from the phone through Remote Control.
 export const isPersonsPrompt = (origin: { kind: string } | undefined): boolean =>
   origin?.kind === 'composer' || origin?.kind === 'bridge'

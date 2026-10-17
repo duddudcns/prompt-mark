@@ -1,6 +1,10 @@
+import { atom, read, update } from 'claude-code'
 import type { Register } from 'claude-code'
 
-import { isPersonsPrompt, wrapToWidth } from './wrap'
+import { probe } from './probe'
+import { isPersonsPrompt, settlePending, textOf, wrapToWidth } from './wrap'
+
+const pending = atom({ plugin: 'prompt-mark', key: 'pending' } as const, [])
 
 const BAR = '▌ '
 
@@ -14,9 +18,9 @@ export const register: Register = (on, options) => {
   on('ui.render', { component: 'UserMessage' }, async ($, e, next) => {
     if (!isPersonsPrompt(e.props.origin)) return next(e)
     const { Box, Text } = $.ui.resolve(e)
-    // A prompt typed while Claude works waits in the queue, drawn under the id 'placeholder':
-    // faint until it is sent.
-    const isPending = e.requestId === 'placeholder'
+    // Faint until sent: the submit placeholder, or a prompt still waiting in the queue.
+    const queued = await read($, pending)
+    const isPending = e.requestId === 'placeholder' || queued.includes(e.props.text)
     const columns = e.viewport?.columns ?? 80
     const width = Math.max(10, columns - BAR.length - 1)
     const lines = wrapToWidth(e.props.text, width)
@@ -35,5 +39,16 @@ export const register: Register = (on, options) => {
         ))}
       </Box>
     )
+  }).catch(($, e, next) => next(e))
+
+  // Queue records and the rows that deliver them tell which typed prompts are still waiting.
+  on('session.append', async ($, e, next) => {
+    const ran = await next(e)
+    if (e.agentId === undefined && isPersonsPrompt('kind' in e.origin ? { kind: e.origin.kind } : undefined)) {
+      const text = textOf(e.message.content)
+      await probe($, { door: e.door, origin: e.origin, text: text.slice(0, 60) })
+      await update($, pending, list => settlePending(list, e.door, text))
+    }
+    return ran
   }).catch(($, e, next) => next(e))
 }

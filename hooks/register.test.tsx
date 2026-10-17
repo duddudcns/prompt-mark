@@ -53,6 +53,21 @@ test('아직 대기 중인 메시지(placeholder 행)는 흐리게 그린다', a
   expect(texts.find(t => t.text === '▌ ')?.props.dimColor).toBe(true)
 })
 
+test('대기열에 있는 동안 흐리고, 전달되면 강조색으로 돌아온다', async ($, on) => {
+  on('ui.render', async () => null as never)
+  const append = (door: string) => $.session.append({
+    message: { type: 'user', role: 'user', content: [{ type: 'text', text: 'wait for me' }] },
+    door, origin: { kind: 'composer' }, uuid: `u-${door}`,
+  } as never)
+  await append('queue')
+  const ui = await $.ui.mount({ plugin: PLUGIN, surface: 'terminal', component: 'UserMessage', requestId: 'm1', props: props('wait for me', 'composer'), viewport: { columns: 40, rows: 20 } as never })
+  const body = async () => (await ui.findAll({ type: 'Text' })).find(t => t.text === 'wait for me')
+  expect((await body())?.props.dimColor).toBe(true)
+  await append('delivery')
+  expect((await body())?.props.dimColor).toBeUndefined()
+  expect((await body())?.props.bold).toBe(true)
+})
+
 test('작업 알림 행은 엔진 기본 모양 그대로 둔다', async ($, on) => {
   // The test's hook stands for the engine's own drawing.
   on('ui.render', async ($$, e) => {
