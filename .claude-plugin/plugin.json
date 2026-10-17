@@ -1,0 +1,28 @@
+{
+  "name": "prompt-mark",
+  "version": "0.1.0",
+  "description": "대화 화면에서 내가 쓴 메시지를 왼쪽 색 막대와 강조색 굵은 글씨로 확실하게 구분",
+  "author": {
+    "name": "duddudcns"
+  },
+  "userConfig": {
+    "barColor": {
+      "type": "string",
+      "title": "막대 색",
+      "description": "왼쪽 막대 색: 색 이름(cyan, magenta…) 또는 #hex",
+      "default": "#38bdf8"
+    },
+    "textColor": {
+      "type": "string",
+      "title": "글자 색",
+      "description": "내 메시지 글자 색: 색 이름 또는 #hex. 비우면 기본 글자색",
+      "default": "#7dd3fc"
+    },
+    "bgColor": {
+      "type": "string",
+      "title": "배경 색",
+      "description": "내 메시지 줄의 배경색(줄 전체 폭): 색 이름 또는 #hex. 비우면 배경 없음",
+      "default": "#373737"
+    }
+  }
+}
