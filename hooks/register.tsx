@@ -2,13 +2,15 @@ import { atom, read, update } from 'claude-code'
 import type { Register } from 'claude-code'
 
 import { probe } from './probe'
-import { isPersonsPrompt, settlePending, textOf, wrapToWidth } from './wrap'
+import { addPending, isPersonsPrompt, settlePending, textOf, wrapToWidth } from './wrap'
 
 const pending = atom({ plugin: 'prompt-mark', key: 'pending' } as const, [])
 
 const BAR = '▌ '
 
 export const register: Register = (on, options) => {
+  // Whether a main-loop turn is running: a prompt submitted meanwhile is queued.
+  let isWorking = false
   const barColor = typeof options.barColor === 'string' && options.barColor ? options.barColor : '#38bdf8'
   const textColor = typeof options.textColor === 'string' && options.textColor ? options.textColor : undefined
   const bgColor = typeof options.bgColor === 'string' && options.bgColor ? options.bgColor : undefined
@@ -41,12 +43,34 @@ export const register: Register = (on, options) => {
     )
   }).catch(($, e, next) => next(e))
 
+  on('turn.start', async ($, e, next) => {
+    if (e.agentId === undefined) isWorking = true
+    return next(e)
+  })
+
+  on('turn.complete', async ($, e, next) => {
+    if (e.agentId === undefined) isWorking = false
+    return next(e)
+  })
+
+  // A prompt the person submits while Claude works waits in the queue until delivered.
+  on('prompt.submit', async ($, e, next) => {
+    const ran = await next(e)
+    await probe($, { at: 'submit', isWorking, command: e.command !== undefined, text: e.text.slice(0, 60) })
+    if (isWorking && e.command === undefined && !e.isMeta && isPersonsPrompt(e.origin)) {
+      await update($, pending, list => addPending(list, e.text))
+    }
+    return ran
+  }).catch(($, e, next) => next(e))
+
   // Queue records and the rows that deliver them tell which typed prompts are still waiting.
   on('session.append', async ($, e, next) => {
     const ran = await next(e)
+    if (e.agentId === undefined && (e.door === 'queue' || e.door === 'delivery' || e.door === 'prompt')) {
+      await probe($, { door: e.door, origin: e.origin, type: e.message.type, text: textOf(e.message.content).slice(0, 60) })
+    }
     if (e.agentId === undefined && isPersonsPrompt('kind' in e.origin ? { kind: e.origin.kind } : undefined)) {
       const text = textOf(e.message.content)
-      await probe($, { door: e.door, origin: e.origin, text: text.slice(0, 60) })
       await update($, pending, list => settlePending(list, e.door, text))
     }
     return ran

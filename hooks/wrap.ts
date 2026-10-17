@@ -38,11 +38,16 @@ export const wrapToWidth = (text: string, width: number): string[] =>
 export const textOf = (content: readonly { type: string; text?: string }[]): string =>
   content.filter(block => block.type === 'text' && typeof block.text === 'string').map(block => block.text).join('\n')
 
-// A prompt typed while Claude works is first a queue record (door 'queue'), then a real row
-// once delivered ('delivery' into the running turn, or 'prompt' opening the next one).
+// Adds a prompt typed while a main turn runs; it waits until a row delivers it.
+export const addPending = (pending: string[], text: string): string[] =>
+  pending.includes(text) ? pending : [...pending, text].slice(-20)
+
+// A queue record (door 'queue') also marks a prompt as waiting; a real row delivers it
+// ('delivery' into the running turn, or 'prompt' opening the next one).
 export const settlePending = (pending: string[], door: string, text: string): string[] => {
   if (door === 'queue') return pending.includes(text) ? pending : [...pending, text].slice(-20)
-  if (door === 'delivery' || door === 'prompt') return pending.filter(p => p !== text && !text.startsWith(p))
+  // A delivery into a running turn wraps the prompt in a reminder: match by containment.
+  if (door === 'delivery' || door === 'prompt') return pending.filter(p => !text.includes(p))
   return pending
 }
 

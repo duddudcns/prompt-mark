@@ -42,4 +42,7 @@ test('대기열 기록이면 대기 목록에 넣고, 실제 전달(prompt/deliv
   expect(settlePending(['hi', 'yo'], 'delivery', 'hi')).toEqual(['yo'])
   expect(settlePending(['hi'], 'prompt', 'hi')).toEqual([])
   expect(settlePending(['hi'], 'response', 'hi')).toEqual(['hi'])
+  // A prompt delivered into a running turn arrives wrapped in a reminder.
+  const wrapped = ['<system-reminder>', 'The user sent a new message while you were working:', '테스트', '</system-reminder>'].join('\n')
+  expect(settlePending(['테스트'], 'delivery', wrapped)).toEqual([])
 })
