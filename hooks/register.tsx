@@ -55,9 +55,11 @@ export const register: Register = (on, options) => {
 
   // A prompt the person submits while Claude works waits in the queue until delivered.
   on('prompt.submit', async ($, e, next) => {
+    // Read before next(e): submitting a prompt while idle starts the turn inside that call.
+    const wasWorking = isWorking
     const ran = await next(e)
-    await probe($, { at: 'submit', isWorking, command: e.command !== undefined, text: e.text.slice(0, 60) })
-    if (isWorking && e.command === undefined && !e.isMeta && isPersonsPrompt(e.origin)) {
+    await probe($, { at: 'submit', wasWorking, command: e.command !== undefined, text: e.text.slice(0, 60) })
+    if (wasWorking && e.command === undefined && !e.isMeta && isPersonsPrompt(e.origin)) {
       await update($, pending, list => addPending(list, e.text))
     }
     return ran
