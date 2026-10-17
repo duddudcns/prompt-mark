@@ -38,18 +38,21 @@ export const wrapToWidth = (text: string, width: number): string[] =>
 export const textOf = (content: readonly { type: string; text?: string }[]): string =>
   content.filter(block => block.type === 'text' && typeof block.text === 'string').map(block => block.text).join('\n')
 
-// Adds a prompt typed while a main turn runs; it waits until a row delivers it.
-export const addPending = (pending: string[], text: string): string[] =>
-  pending.includes(text) ? pending : [...pending, text].slice(-20)
+export type Pending = { text: string; at: number }
 
-// A queue record (door 'queue') also marks a prompt as waiting; a real row delivers it
-// ('delivery' into the running turn, or 'prompt' opening the next one).
-export const settlePending = (pending: string[], door: string, text: string): string[] => {
-  if (door === 'queue') return pending.includes(text) ? pending : [...pending, text].slice(-20)
-  // A delivery into a running turn wraps the prompt in a reminder: match by containment.
-  if (door === 'delivery' || door === 'prompt') return pending.filter(p => !text.includes(p))
-  return pending
-}
+// Adds a prompt typed while a main turn runs, with the time it was submitted.
+export const addPending = (pending: Pending[], text: string, at: number): Pending[] =>
+  pending.some(p => p.text === text) ? pending : [...pending, { text, at }].slice(-20)
+
+// A row delivers it: 'delivery' into the running turn (wrapped in a reminder, so match by
+// containment) or 'prompt' opening the next one.
+export const settlePending = (pending: Pending[], door: string, text: string): Pending[] =>
+  door === 'delivery' || door === 'prompt' ? pending.filter(p => !text.includes(p.text)) : pending
+
+// Rows carry no queued flag, and earlier prompts may share the text: only a row first drawn
+// after the prompt was submitted is the queued one.
+export const isPendingRow = (pending: Pending[], text: string, firstSeenAt: number): boolean =>
+  pending.some(p => p.text === text && firstSeenAt >= p.at)
 
 // The person's own words: typed at the prompt, or sent from the phone through Remote Control.
 export const isPersonsPrompt = (origin: { kind: string } | undefined): boolean =>

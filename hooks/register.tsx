@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { Register } from 'claude-code'
 
 import { probe } from './probe'
-import { addPending, isPersonsPrompt, settlePending, textOf, wrapToWidth } from './wrap'
+import { addPending, isPendingRow, isPersonsPrompt, settlePending, textOf, wrapToWidth } from './wrap'
 
 const pending = atom({ plugin: 'prompt-mark', key: 'pending' } as const, [])
 
@@ -11,6 +11,8 @@ const BAR = '▌ '
 export const register: Register = (on, options) => {
   // Whether a main-loop turn is running: a prompt submitted meanwhile is queued.
   let isWorking = false
+  // When each transcript row was first drawn (module memory: a reload starts it over).
+  const firstSeen = new Map<string, number>()
   const barColor = typeof options.barColor === 'string' && options.barColor ? options.barColor : '#38bdf8'
   const textColor = typeof options.textColor === 'string' && options.textColor ? options.textColor : undefined
   const bgColor = typeof options.bgColor === 'string' && options.bgColor ? options.bgColor : undefined
@@ -22,7 +24,9 @@ export const register: Register = (on, options) => {
     const { Box, Text } = $.ui.resolve(e)
     // Faint until sent: the submit placeholder, or a prompt still waiting in the queue.
     const queued = await read($, pending)
-    const isPending = e.requestId === 'placeholder' || queued.includes(e.props.text)
+    const now = await $.clock.now()
+    if (!firstSeen.has(e.requestId)) firstSeen.set(e.requestId, now)
+    const isPending = e.requestId === 'placeholder' || isPendingRow(queued, e.props.text, firstSeen.get(e.requestId) ?? now)
     const columns = e.viewport?.columns ?? 80
     const width = Math.max(10, columns - BAR.length - 1)
     const lines = wrapToWidth(e.props.text, width)
@@ -57,10 +61,11 @@ export const register: Register = (on, options) => {
   on('prompt.submit', async ($, e, next) => {
     // Read before next(e): submitting a prompt while idle starts the turn inside that call.
     const wasWorking = isWorking
+    const submittedAt = await $.clock.now()
     const ran = await next(e)
     await probe($, { at: 'submit', wasWorking, command: e.command !== undefined, text: e.text.slice(0, 60) })
     if (wasWorking && e.command === undefined && !e.isMeta && isPersonsPrompt(e.origin)) {
-      await update($, pending, list => addPending(list, e.text))
+      await update($, pending, list => addPending(list, e.text, submittedAt))
     }
     return ran
   }).catch(($, e, next) => next(e))

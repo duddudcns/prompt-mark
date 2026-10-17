@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { displayWidth, isPersonsPrompt, settlePending, textOf, wrapToWidth } from './wrap'
+import { addPending, displayWidth, isPendingRow, isPersonsPrompt, settlePending, textOf, wrapToWidth } from './wrap'
 
 test('표시 폭: 영문 1칸, 한글 2칸', async () => {
   expect(displayWidth('ab')).toBe(2)
@@ -36,13 +36,22 @@ test('행 본문은 텍스트 블록만 이어 붙인다', async () => {
   expect(textOf([{ type: 'text', text: 'a' }, { type: 'image' }, { type: 'text', text: 'b' }])).toBe('a\nb')
 })
 
-test('대기열 기록이면 대기 목록에 넣고, 실제 전달(prompt/delivery)이면 뺀다', async () => {
-  expect(settlePending([], 'queue', 'hi')).toEqual(['hi'])
-  expect(settlePending(['hi'], 'queue', 'hi')).toEqual(['hi'])
-  expect(settlePending(['hi', 'yo'], 'delivery', 'hi')).toEqual(['yo'])
-  expect(settlePending(['hi'], 'prompt', 'hi')).toEqual([])
-  expect(settlePending(['hi'], 'response', 'hi')).toEqual(['hi'])
-  // A prompt delivered into a running turn arrives wrapped in a reminder.
+test('대기 항목은 글자와 시작 시각을 갖고, 같은 글자는 다시 넣지 않는다', async () => {
+  expect(addPending([], 'hi', 5)).toEqual([{ text: 'hi', at: 5 }])
+  expect(addPending([{ text: 'hi', at: 5 }], 'hi', 9)).toEqual([{ text: 'hi', at: 5 }])
+})
+
+test('실제 전달(prompt/delivery)이면 뺀다, 감싼 전달도 포함 비교로 뺀다', async () => {
+  const list = [{ text: 'hi', at: 1 }, { text: 'yo', at: 2 }]
+  expect(settlePending(list, 'delivery', 'hi')).toEqual([{ text: 'yo', at: 2 }])
+  expect(settlePending(list, 'response', 'hi')).toEqual(list)
   const wrapped = ['<system-reminder>', 'The user sent a new message while you were working:', '테스트', '</system-reminder>'].join('\n')
-  expect(settlePending(['테스트'], 'delivery', wrapped)).toEqual([])
+  expect(settlePending([{ text: '테스트', at: 1 }], 'delivery', wrapped)).toEqual([])
+})
+
+test('같은 글자라도 대기 시작 전에 이미 그려진 행은 대기 중이 아니다', async () => {
+  const queued = [{ text: '테스트', at: 100 }]
+  expect(isPendingRow(queued, '테스트', 150)).toBe(true)
+  expect(isPendingRow(queued, '테스트', 50)).toBe(false)
+  expect(isPendingRow(queued, '다른 글', 150)).toBe(false)
 })
