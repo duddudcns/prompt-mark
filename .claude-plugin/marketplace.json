@@ -1,0 +1,8 @@
+{
+  "name": "prompt-mark",
+  "owner": { "name": "duddudcns" },
+  "description": "내가 쓴 메시지를 색 막대와 강조색으로 구분하는 Claude Code mod",
+  "plugins": [
+    { "name": "prompt-mark", "source": "./", "description": "내가 쓴 메시지를 왼쪽 색 막대·강조색 굵은 글씨·회색 배경으로 구분, 대기 중 메시지는 흐리게" }
+  ]
+}
