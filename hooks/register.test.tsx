@@ -84,6 +84,22 @@ test('작업 중에 보낸 메시지만 흐리고(같은 글자의 이전 행은
   expect((await bodyOf(queued))?.props.bold).toBe(true)
 })
 
+test('작업 중에 보낸 명령어도 흐리고, 명령이 실행되면 대기 목록에서 빠진다', async ($, on) => {
+  const clock = mock.clock(on)
+  on('ui.render', async () => null as never)
+  on('turn.start', async (_$, e) => ({ turnId: e.turnId }))
+  on('prompt.submit', async (_$, e) => ({ text: e.text }))
+  on('command.run', async () => ({ text: 'ran' }))
+  await $.turn.start({ text: 'go', turnId: 't1' } as never)
+  await $.prompt.submit({ text: '/sap', origin: { kind: 'composer' }, command: { name: 'sap', args: '' } } as never)
+  await clock.advance(10)
+  const ui = await $.ui.mount({ plugin: PLUGIN, surface: 'terminal', component: 'UserMessage', requestId: 'c1', props: props('/sap', 'composer'), viewport: { columns: 40, rows: 20 } as never })
+  const body = async () => (await ui.findAll({ type: 'Text' })).find(t => t.text === '/sap')
+  expect((await body())?.props.dimColor).toBe(true)
+  await $.command.run({ command: 'sap', args: '' } as never)
+  expect((await body())?.props.bold).toBe(true)
+})
+
 test('작업 알림 행은 엔진 기본 모양 그대로 둔다', async ($, on) => {
   mock.clock(on)
   // The test's hook stands for the engine's own drawing.

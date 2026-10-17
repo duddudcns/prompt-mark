@@ -49,6 +49,13 @@ export const addPending = (pending: Pending[], text: string, at: number): Pendin
 export const settlePending = (pending: Pending[], door: string, text: string): Pending[] =>
   door === 'delivery' || door === 'prompt' ? pending.filter(p => !text.includes(p.text)) : pending
 
+// The row of a queued slash command shows its line with the slash.
+export const commandLine = (name: string, args: string): string => (args ? `/${name} ${args}` : `/${name}`)
+
+// A queued command leaves the queue when it runs.
+export const settleCommand = (pending: Pending[], name: string): Pending[] =>
+  pending.filter(p => p.text !== `/${name}` && !p.text.startsWith(`/${name} `))
+
 // Rows carry no queued flag, and earlier prompts may share the text: only a row first drawn
 // after the prompt was submitted is the queued one.
 export const isPendingRow = (pending: Pending[], text: string, firstSeenAt: number): boolean =>

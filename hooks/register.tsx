@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { Register } from 'claude-code'
 
 import { probe } from './probe'
-import { addPending, isPendingRow, isPersonsPrompt, settlePending, textOf, wrapToWidth } from './wrap'
+import { addPending, commandLine, isPendingRow, isPersonsPrompt, settleCommand, settlePending, textOf, wrapToWidth } from './wrap'
 
 const pending = atom({ plugin: 'prompt-mark', key: 'pending' } as const, [])
 
@@ -64,10 +64,17 @@ export const register: Register = (on, options) => {
     const submittedAt = await $.clock.now()
     const ran = await next(e)
     await probe($, { at: 'submit', wasWorking, command: e.command !== undefined, text: e.text.slice(0, 60) })
-    if (wasWorking && e.command === undefined && !e.isMeta && isPersonsPrompt(e.origin)) {
-      await update($, pending, list => addPending(list, e.text, submittedAt))
+    if (wasWorking && !e.isMeta && isPersonsPrompt(e.origin)) {
+      const text = e.command ? commandLine(e.command.name, e.command.args) : e.text
+      await update($, pending, list => addPending(list, text, submittedAt))
     }
     return ran
+  }).catch(($, e, next) => next(e))
+
+  // A queued slash command stops waiting when it runs.
+  on('command.run', async ($, e, next) => {
+    await update($, pending, list => settleCommand(list, e.command))
+    return next(e)
   }).catch(($, e, next) => next(e))
 
   // Queue records and the rows that deliver them tell which typed prompts are still waiting.
