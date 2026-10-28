@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { addPending, displayWidth, isPendingRow, isPersonsPrompt, settlePending, textOf, wrapToWidth } from './wrap'
+import { addPending, displayWidth, isPendingRow, isPersonsPrompt, settlePending, stripPasteTags, textOf, wrapToWidth } from './wrap'
 
 test('표시 폭: 영문 1칸, 한글 2칸', async () => {
   expect(displayWidth('ab')).toBe(2)
@@ -54,4 +54,10 @@ test('같은 글자라도 대기 시작 전에 이미 그려진 행은 대기 �
   expect(isPendingRow(queued, '테스트', 150)).toBe(true)
   expect(isPendingRow(queued, '테스트', 50)).toBe(false)
   expect(isPendingRow(queued, '다른 글', 150)).toBe(false)
+})
+
+test('붙여넣기 태그는 빼고 안의 글만 남긴다', async () => {
+  expect(stripPasteTags('앞\n<pasted_content id="ac72">\n본문\n</pasted_content id="ac72">\n뒤')).toBe('앞\n본문\n뒤')
+  expect(stripPasteTags('<pasted_content id="x1">한 줄</pasted_content id="x1">')).toBe('한 줄')
+  expect(stripPasteTags('태그 없음')).toBe('태그 없음')
 })

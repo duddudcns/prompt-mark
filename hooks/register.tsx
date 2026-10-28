@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import { probe } from './probe'
-import { addPending, commandLine, commandNameIn, isPendingRow, isPersonsPrompt, isQueuedCommandRow, settlePending, textOf, wrapToWidth } from './wrap'
+import { addPending, commandLine, commandNameIn, isPendingRow, isPersonsPrompt, isQueuedCommandRow, settlePending, stripPasteTags, textOf, wrapToWidth } from './wrap'
 
 const pending = atom({ plugin: 'prompt-mark', key: 'pending' } as const, [])
 // Bumped when queued commands are released, so their rows redraw.
@@ -49,7 +49,7 @@ export const register: Register = (on, options) => {
     await probe($, { at: 'render', requestId: e.requestId, text: e.props.text.slice(0, 40), isPending, queued: queued.length, onScreen: e.props.onScreen ?? null })
     const columns = e.viewport?.columns ?? 80
     const width = Math.max(10, columns - BAR.length - 1)
-    const lines = wrapToWidth(e.props.text, width)
+    const lines = wrapToWidth(stripPasteTags(e.props.text), width)
     return (
       <Box flexDirection="column" marginTop={1}>
         {lines.map((line, i) => (

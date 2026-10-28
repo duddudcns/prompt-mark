@@ -71,3 +71,8 @@ export const isPendingRow = (pending: Pending[], text: string, firstSeenAt: numb
 // The person's own words: typed at the prompt, or sent from the phone through Remote Control.
 export const isPersonsPrompt = (origin: { kind: string } | undefined): boolean =>
   origin?.kind === 'composer' || origin?.kind === 'bridge'
+
+// Pasted text reaches the row wrapped in <pasted_content id="..."> tags meant for Claude only;
+// the row shows just what was pasted.
+export const stripPasteTags = (text: string): string =>
+  text.replace(/<\/?pasted_content(?: id="[^"]*")?>\r?\n?/g, '')
