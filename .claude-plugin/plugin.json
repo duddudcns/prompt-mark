@@ -1,6 +1,6 @@
 {
   "name": "prompt-mark",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "대화 화면에서 내가 쓴 메시지를 왼쪽 색 막대와 강조색 굵은 글씨로 확실하게 구분",
   "author": {
     "name": "duddudcns"
