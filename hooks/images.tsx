@@ -1,5 +1,7 @@
 import type { EngineInterface, Register, RenderChildren } from 'claude-code'
 
+import { registerTestTool } from './imgtest'
+
 // Images: pictures drawn with Claude Code's own Image element, from PNG bytes the mod
 // holds: no shell, no converter, so it behaves the same on Windows, macOS and
 // Linux. Non-PNG input is skipped (the engine's Image takes PNG or RGBA only).
@@ -122,6 +124,7 @@ export const registerImages = (on: Parameters<Register>[0]): void => {
       },
       isDeferred: false,
     })
+    await registerTestTool($)
     return next(e)
   })
 

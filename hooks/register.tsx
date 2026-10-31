@@ -2,6 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import { capturePastes, drawUnder, pastedFor, registerImages } from './images'
+import { registerImageTest } from './imgtest'
 import { probe } from './probe'
 import { addPending, commandLine, commandNameIn, isPendingRow, isPersonsPrompt, isQueuedCommandRow, settlePending, stripPasteTags, textOf, wrapToWidth } from './wrap'
 
@@ -21,6 +22,7 @@ async function releaseCommands($: EngineInterface, queued: Map<string, string>, 
 
 export const register: Register = (on, options) => {
   registerImages(on)
+  registerImageTest(on)
   // Whether a main-loop turn is running: a prompt submitted meanwhile is queued.
   let isWorking = false
   // When each transcript row was first drawn (module memory: a reload starts it over).
