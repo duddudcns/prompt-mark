@@ -1,7 +1,7 @@
 {
   "name": "prompt-mark",
-  "version": "0.1.1",
-  "description": "대화 화면에서 내가 쓴 메시지를 왼쪽 색 막대와 강조색 굵은 글씨로 확실하게 구분",
+  "version": "0.2.0",
+  "description": "대화 화면 꾸미기: 내 메시지를 색 막대·강조색으로 구분하고, PNG 이미지(붙여넣기·Read·show_image)를 대화창에 바로 표시",
   "author": {
     "name": "duddudcns"
   },

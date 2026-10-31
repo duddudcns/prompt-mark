@@ -1,6 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
+import { capturePastes, drawUnder, pastedFor, registerImages } from './images'
 import { probe } from './probe'
 import { addPending, commandLine, commandNameIn, isPendingRow, isPersonsPrompt, isQueuedCommandRow, settlePending, stripPasteTags, textOf, wrapToWidth } from './wrap'
 
@@ -19,6 +20,7 @@ async function releaseCommands($: EngineInterface, queued: Map<string, string>, 
 }
 
 export const register: Register = (on, options) => {
+  registerImages(on)
   // Whether a main-loop turn is running: a prompt submitted meanwhile is queued.
   let isWorking = false
   // When each transcript row was first drawn (module memory: a reload starts it over).
@@ -50,7 +52,8 @@ export const register: Register = (on, options) => {
     const columns = e.viewport?.columns ?? 80
     const width = Math.max(10, columns - BAR.length - 1)
     const lines = wrapToWidth(stripPasteTags(e.props.text), width)
-    return (
+    const pictures = pastedFor(e.requestId, e.surface)
+    const row = (
       <Box flexDirection="column" marginTop={1}>
         {lines.map((line, i) => (
           // Full-width rows keep the engine's grey band behind the bar and text.
@@ -65,6 +68,8 @@ export const register: Register = (on, options) => {
         ))}
       </Box>
     )
+    // Pasted pictures go right under the text, from this same hook.
+    return pictures.length > 0 ? drawUnder($.ui.resolve(e), columns, row, pictures) : row
   }).catch(($, e, next) => next(e))
 
   on('turn.start', async ($, e, next) => {
@@ -98,6 +103,7 @@ export const register: Register = (on, options) => {
   // Queue records and the rows that deliver them tell which typed prompts are still waiting.
   on('session.append', async ($, e, next) => {
     const ran = await next(e)
+    capturePastes(e.door, e.uuid, e.message.content)
     if (e.agentId === undefined) {
       await probe($, { door: e.door, origin: e.origin, type: e.message.type, text: textOf(e.message.content).slice(0, 60) })
     }
