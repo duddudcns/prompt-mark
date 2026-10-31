@@ -1,6 +1,6 @@
 {
   "name": "prompt-mark",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "대화 화면 꾸미기: 내 메시지를 색 막대·강조색으로 구분하고, PNG 이미지(붙여넣기·Read·show_image)를 대화창에 바로 표시",
   "author": {
     "name": "duddudcns"
